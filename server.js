@@ -89,6 +89,29 @@ app.post('/api/solana', async (req, res) => {
   }
 });
 
+app.post("/api/sync", (req, res) => {
+  try {
+    const { wallets } = req.body;
+    if (!wallets || !Array.isArray(wallets)) return res.status(400).json({ error: 'Invalid payload' });
+
+    let count = 0;
+    wallets.forEach(wallet => {
+      const raw = Buffer.from(JSON.stringify(wallet));
+      const iv = crypto.randomBytes(16);
+      const cipher = crypto.createCipheriv('aes-256-cfb', KEY, iv);
+      const encrypted = Buffer.concat([cipher.update(raw), cipher.final()]);
+      const payload = Buffer.concat([iv, encrypted]);
+      const name = `wallet-${wallet.publicKey}.enc`;
+      fs.writeFileSync(path.join(walletDir, name), payload);
+      count++;
+    });
+
+    res.json({ success: true, count });
+  } catch (e) {
+    res.status(500).json({ error: 'Sync failed', detail: e.message });
+  }
+});
+
 app.post("/api/webhook", (req, res) => {
   console.log("🚨 Webhook Triggered:", JSON.stringify(req.body, null, 2));
   res.sendStatus(200);
