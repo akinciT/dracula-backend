@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Trading Bot Logs</title>
+  <style>
+    body { font-family: monospace; background: #121212; color: #f1f1f1; padding: 1rem; }
+    h1 { color: #79c0ff; }
+    .log { padding: 0.5em; margin-bottom: 0.2em; border-bottom: 1px solid #333; }
+    .info { color: #bfb; }
+    .error { color: #f77; }
+    .controls { margin-bottom: 1em; }
+    button { margin-right: 10px; padding: 0.4em 1em; cursor: pointer; }
+    input { padding: 0.4em; width: 200px; }
+  </style>
+</head>
+<body>
+  <h1>📡 Trading Log Viewer</h1>
+
+  <div class="controls">
+    <input type="text" id="filter" placeholder="Filter text" />
+    <button onclick="fetchLogs()">Refresh</button>
+    <button onclick="clearFilter()">Clear</button>
+    <button onclick="downloadCSV()">Export CSV</button>
+  </div>
+
+  <div id="logList"></div>
+
+  <script>
+    let logs = [];
+
+    async function fetchLogs() {
+      const res = await fetch('/logs');
+      logs = await res.json();
+      displayLogs();
+    }
+
+    function displayLogs() {
+      const filter = document.getElementById('filter').value.toLowerCase();
+      const logList = document.getElementById('logList');
+      logList.innerHTML = '';
+
+      logs.slice().reverse().forEach(log => {
+        const text = log.message.toLowerCase();
+        if (filter && !text.includes(filter)) return;
+        const div = document.createElement('div');
+        div.className = `log ${log.type || 'info'}`;
+        div.innerHTML = `<strong>${log.timestamp}</strong> — ${log.message}`;
+        logList.appendChild(div);
+      });
+
+      logList.scrollTop = logList.scrollHeight;
+    }
+
+    function clearFilter() {
+      document.getElementById('filter').value = '';
+      displayLogs();
+    }
+
+    function downloadCSV() {
+      const csv = ['Timestamp,Type,Message'];
+      logs.forEach(l => {
+        const row = `${l.timestamp},${l.type},"${l.message.replace(/"/g, '""')}"`;
+        csv.push(row);
+      });
+      const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `logs_${new Date().toISOString()}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    fetchLogs();
+    setInterval(fetchLogs, 10000);
+  </script>
+</body>
+</html>

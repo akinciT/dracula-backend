@@ -1,0 +1,10 @@
+{
+  "bot": [
+    {
+      "publicKey": "xxxxx",
+      "secretKey": [12, 34, ..., 64 values],
+      "tokens": 0
+    },
+    ...
+  ]
+}

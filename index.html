@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/icon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DrugCula</title>
+  <style>
+    body { background-color: #0d0d0d; color: #f8f8f2; font-family: monospace; margin: 0; padding: 1em; }
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    .panel { background: #1e1e2f; padding: 16px; border-radius: 12px; border: 1px solid #444; }
+    h2 { color: #ff79c6; }
+    button { margin: 5px; padding: 5px 10px; background: #44475a; color: white; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; }
+    button img { margin-right: 6px; height: 22px; vertical-align: middle; }
+    .wallet-item { display: flex; justify-content: space-between; margin: 5px 0; flex-wrap: wrap; gap: 4px; }
+    textarea { width: 100%; height: 200px; background: #111; color: #50fa7b; padding: 8px; border-radius: 5px; border: 1px solid #444; }
+    canvas { width: 100% !important; max-height: 300px; }
+    .control-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; flex-wrap: wrap; }
+    select, input[type="text"], input[type="number"] { padding: 4px 8px; background: #222; color: white; border-radius: 5px; border: 1px solid #444; }
+    .wallet-box { border: 1px solid #444; background: #1a1a1a; padding: 12px; margin-bottom: 8px; border-radius: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .wallet-box-header { font-weight: bold; color: #50fa7b; font-size: 15px; }
+    .wallet-box-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    h2 span.emoji { font-size: 2em; line-height: 1; vertical-align: middle; margin-right: 6px; }
+    ul { list-style: none; padding: 0; }
+    li { margin-bottom: 4px; }
+    #whitelist li button { background-color: #ff5555; font-size: 12px; padding: 2px 6px; }
+    .dracula-header { font-family: 'Nosifer', cursive; font-size: 52px; color: #f8f8f2; text-shadow: 0 0 8px #ff79c6, 0 0 20px #bd93f9; margin-bottom: 0; }
+    .drip { width: 100%; height: 10px; background: radial-gradient(circle, #ff2d55 30%, transparent 70%); background-size: 20px 20px; animation: drip 1.2s linear infinite; margin-bottom: 1em; }
+    @keyframes drip { 0% { background-position: 0 0; } 100% { background-position: 20px 0; } }
+    .grid-2col { display: grid; grid-template-columns: 1fr 350px; gap: 20px; margin-bottom: 20px; }
+    .preset-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 10px 0; }
+    iframe { width: 100%; height: 600px; border: none; border-radius: 8px; background: #0d0d0d; }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); z-index: 9998; }
+    .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e1e2f; border: 1px solid #444; padding: 20px; border-radius: 10px; width: 300px; z-index: 9999; }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Nosifer&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="dracula-header" style="text-align: center; margin-bottom: 1em;">
+  <img src="/logo.png" alt="DrugCula Logo" style="height: 250px; margin-bottom: 0.2em;" />
+  <div style="font-family: 'Nosifer', cursive; font-size: 52px; color: #f8f8f2; text-shadow: 0 0 8px #ff79c6, 0 0 20px #bd93f9;">
+    DrugCula Trading Suite
+  </div>
+</div>
+<div class="drip"></div>
+
+<div class="grid">
+  <div class="panel">
+    <h2><span class="emoji">📊</span> Market Data</h2>
+    <p>SOL Price: <span id="solPrice">$0.00</span></p>
+    <p>Token Price: <span id="tokenPrice">$0.00</span></p>
+    <p>Market Cap: <span id="marketCap">$0.00</span></p>
+    <p>Liquidity: <span id="liquidity">$0.00</span></p>
+    <input id="tokenInput" placeholder="Token Address" />
+    <button id="setToken">Set Token</button>
+  </div>
+
+  <div class="panel">
+    <h2><span class="emoji">👑</span> Master Wallets</h2>
+    <button id="connectPhantom">Connect Phantom</button>
+    <p>Phantom: <span id="phantomAddress">Not Connected</span> - <span id="phantomBalance">0</span> SOL</p>
+    <button id="connectSolflare">Connect Solflare</button>
+    <p>Solflare: <span id="solflareAddress">Not Connected</span> - <span id="solflareBalance">0</span> SOL</p>
+    <button id="autoFund"><img src="/icons/wallet.png" alt="Wallet" />Auto Fund Chain</button>
+  </div>
+
+  <div class="panel">
+    <h2><span class="emoji">💼</span> Main Wallets</h2>
+    <div class="control-row">
+      <button id="generateMain">Generate</button>
+      <button id="importMain">Import</button>
+      <input type="text" id="mainAmount" placeholder="1.0" />
+      <button class="fund-all" data-type="main">Fund All</button>
+      <select><option value="phantom">From Phantom</option><option value="solflare">From Solflare</option></select>
+    </div>
+    <div id="mainWallets"></div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="emoji">👻</span> Ghost Wallets</h2>
+    <div class="control-row">
+      <button id="generateGhost">Generate</button>
+      <input type="text" id="ghostAmount" placeholder="1.0" />
+      <button class="fund-all" data-type="ghost">Fund All</button>
+      <select>
+        <option value="phantom">From Phantom</option>
+        <option value="solflare">From Solflare</option>
+        <option value="main">From Main</option>
+      </select>
+    </div>
+    <div id="ghostWallets"></div>
+  </div>
+  <div class="panel">
+    <h2><span class="emoji">🤖</span> Bot Wallets</h2>
+    <div class="control-row">
+      <button id="generateBot">Generate (50)</button>
+      <button id="scaleBot">Scale to 100</button>
+      <input type="text" id="botAmount" placeholder="1.0" />
+      <button class="fund-all" data-type="bot">Fund All</button>
+      <select>
+        <option value="phantom">From Phantom</option>
+        <option value="solflare">From Solflare</option>
+        <option value="ghost">From Ghost</option>
+      </select>
+    </div>
+    <div id="botWallets"></div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="emoji">🪞</span> Mirror Traders</h2>
+    <div class="control-row">
+      <input type="text" id="mirrorLeader" placeholder="Leader Wallet to Follow" />
+      <input type="text" id="mirrorAmount" placeholder="Amount" />
+      <button id="setMirrorLeader">Set Leader</button>
+      <button id="generateMirror">Generate Mirror Traders (5)</button>
+    </div>
+    <div id="mirrorWallets"></div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="emoji">🛡️</span> Whitelist Manager</h2>
+    <div class="control-row">
+      <input type="text" id="whitelistInput" placeholder="Wallet Address" />
+      <button id="addWhitelistBtn">Add to Whitelist</button>
+    </div>
+    <ul id="whitelist"></ul>
+  </div>
+
+  <div class="panel">
+    <h2><span class="emoji">🎯</span> Group Activity</h2>
+    <div class="group-actions" data-group="A">
+      <h3>Group A</h3>
+      <button class="start" data-group="A">Start</button>
+      <button class="sell" data-group="A">Sell</button>
+      <button class="withdraw" data-group="A">Withdraw</button>
+    </div>
+    <div class="group-actions" data-group="B">
+      <h3>Group B</h3>
+      <button class="start" data-group="B">Start</button>
+      <button class="sell" data-group="B">Sell</button>
+      <button class="withdraw" data-group="B">Withdraw</button>
+    </div>
+    <div class="group-actions" data-group="C">
+      <h3>Group C</h3>
+      <button class="start" data-group="C">Start</button>
+      <button class="sell" data-group="C">Sell</button>
+      <button class="withdraw" data-group="C">Withdraw</button>
+    </div>
+    <div class="group-actions" data-group="D">
+      <h3>Group D</h3>
+      <button class="start" data-group="D">Start</button>
+      <button class="sell" data-group="D">Sell</button>
+      <button class="withdraw" data-group="D">Withdraw</button>
+    </div>
+    <div style="margin-top: 15px;">
+      <button id="withdrawPhase1"><img src="/icons/withdraw_phase_1.png" style="height: 26px;" alt="W1" />Withdraw Phase 1</button>
+      <button id="withdrawPhase2"><img src="/icons/withdraw_phase_2.png" style="height: 26px;" alt="W2" />Withdraw Phase 2</button>
+      <button id="buyNowAll"><img src="/icons/buy_now.png" alt="Buy" />Buy Now (All Groups)</button>
+      <button id="exportPnl"><img src="/icons/export_pnl.png" alt="Export" />Export PnL</button>
+      <button id="emergencyStop"><img src="/icons/emergency_stop.png" alt="Emergency" />Emergency Stop</button>
+      <button id="toggleStealth"><img src="/icons/stealth_mode.png" alt="Stealth" />Stealth Mode</button>
+    </div>
+  </div>
+    <div class="panel" style="grid-column: 1 / -1;">
+    <h2><span class="emoji">📈</span> Group Activity Chart</h2>
+    <canvas id="groupChart"></canvas>
+  </div>
+
+  <div class="panel" style="grid-column: 1 / -1;">
+    <h2>📈 Trading Screen</h2>
+    <div class="grid-2col">
+      <div>
+        <iframe id="dexChart" src=""></iframe>
+      </div>
+      <div style="background:#151525; border-radius:8px; padding:16px; position:relative;">
+        <button id="openTradeSettings" style="position:absolute; top:10px; right:10px; background:#333; color:#ccc; border:none; border-radius:4px; padding:2px 8px; cursor:pointer;">⚙️</button>
+        <h3 style="color:#ff79c6;">⚡ Instant Trade</h3>
+        <label>Buy Amount (SOL):</label>
+        <div class="preset-grid">
+          <button class="buy-amount" data-index="0">0.01</button>
+          <button class="buy-amount" data-index="1">0.1</button>
+          <button class="buy-amount" data-index="2">0.5</button>
+          <button class="buy-amount" data-index="3">1</button>
+        </div>
+        <label>Sell Amount (%):</label>
+        <div class="preset-grid">
+          <button class="sell-amount" data-index="0">10%</button>
+          <button class="sell-amount" data-index="1">25%</button>
+          <button class="sell-amount" data-index="2">50%</button>
+          <button class="sell-amount" data-index="3">100%</button>
+        </div>
+        <label>Priority Fee (SOL):</label>
+        <input type="number" id="priorityFee" value="0.005" step="0.001" />
+        <button id="instantConfirm">Confirm</button>
+        <hr style="border-color:#444; margin:16px 0;" />
+        <div style="color:#888; font-size:14px; margin-top:12px;">Activity Log:</div>
+        <div id="gmgnTradeLog" style="background:#000; color:#50fa7b; font-size:12px; padding:8px; height:120px; overflow-y:auto; border-radius:4px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="grid-column: 1 / -1;">
+    <h2><span class="emoji">🪵</span> Logs</h2>
+    <textarea id="logs" readonly></textarea>
+  </div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+<script type="module">
+  const tokenInput = document.getElementById("tokenInput");
+  const setTokenBtn = document.getElementById("setToken");
+  const chartFrame = document.getElementById("dexChart");
+
+  setTokenBtn?.addEventListener("click", () => {
+    const token = tokenInput?.value.trim();
+    if (!token) return alert("❌ Token address is empty");
+    localStorage.setItem("selectedToken", token);
+    chartFrame.src = `https://dexscreener.com/solana/${token}?embed=1&theme=dark`;
+
+    const logBox = document.getElementById("gmgnTradeLog");
+    if (logBox) {
+      logBox.innerHTML += `<div>📈 Token set: ${token}</div>`;
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+  });
+
+  window.addEventListener("DOMContentLoaded", () => {
+    const savedToken = localStorage.getItem("selectedToken");
+    if (savedToken && chartFrame) {
+      tokenInput.value = savedToken;
+      chartFrame.src = `https://dexscreener.com/solana/${savedToken}?embed=1&theme=dark`;
+    }
+  });
+
+  document.getElementById("instantConfirm")?.addEventListener("click", () => {
+    const priorityFee = parseFloat(document.getElementById("priorityFee")?.value || "0");
+    const logBox = document.getElementById("gmgnTradeLog");
+    logBox.innerHTML += `<div>⚡ Confirm clicked with fee ${priorityFee.toFixed(3)} SOL</div>`;
+    logBox.scrollTop = logBox.scrollHeight;
+  });
+
+  document.querySelectorAll(".buy-amount").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const logBox = document.getElementById("gmgnTradeLog");
+      logBox.innerHTML += `<div>🟢 Buy ${btn.textContent} SOL</div>`;
+      logBox.scrollTop = logBox.scrollHeight;
+    });
+  });
+
+  document.querySelectorAll(".sell-amount").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const logBox = document.getElementById("gmgnTradeLog");
+      logBox.innerHTML += `<div>🔴 Sell ${btn.textContent}</div>`;
+      logBox.scrollTop = logBox.scrollHeight;
+    });
+  });
+</script>
+
+<div class="modal-overlay" id="modalOverlay"></div>
+<div class="modal" id="tradeSettingsModal">
+  <h3 style="color:#ff79c6;">⚙️ Edit Trade Presets</h3>
+  <label>Buy Amounts (SOL, comma-separated)</label>
+  <input type="text" id="buyPresetsInput" placeholder="0.01,0.1,0.5,1" />
+  <label>Sell Percentages (%, comma-separated)</label>
+  <input type="text" id="sellPresetsInput" placeholder="10,25,50,100" />
+  <button id="savePresets" style="margin-top:10px;">Save Presets</button>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const openBtn = document.getElementById("openTradeSettings");
+  const modal = document.getElementById("tradeSettingsModal");
+  const overlay = document.getElementById("modalOverlay");
+  const saveBtn = document.getElementById("savePresets");
+
+  openBtn.addEventListener("click", () => {
+    modal.style.display = "block";
+    overlay.style.display = "block";
+  });
+
+  overlay.addEventListener("click", () => {
+    modal.style.display = "none";
+    overlay.style.display = "none";
+  });
+
+  saveBtn.addEventListener("click", () => {
+    const buyPresets = document.getElementById("buyPresetsInput").value;
+    const sellPresets = document.getElementById("sellPresetsInput").value;
+    
+    // Update buy buttons
+    const buyButtons = document.querySelectorAll(".buy-amount");
+    buyPresets.split(",").forEach((amount, i) => {
+      if (buyButtons[i]) {
+        buyButtons[i].textContent = amount.trim();
+      }
+    });
+    
+    // Update sell buttons
+    const sellButtons = document.querySelectorAll(".sell-amount");
+    sellPresets.split(",").forEach((percent, i) => {
+      if (sellButtons[i]) {
+        sellButtons[i].textContent = `${percent.trim()}%`;
+      }
+    });
+    
+    modal.style.display = "none";
+    overlay.style.display = "none";
+    
+    const logBox = document.getElementById("gmgnTradeLog");
+    logBox.innerHTML += `<div>⚙️ Presets updated</div>`;
+    logBox.scrollTop = logBox.scrollHeight;
+  });
+});
+</script>
+</body>
+</html>

@@ -1,24 +1,39 @@
+# Dependency directories
+node_modules/
+
+# Build artifacts
+dist/
+build/
+.vite/
+.svelte-kit/
+
 # Logs
-logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Environment files (secrets, keys)
+.env
+.env.local
+.env.*.local
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Wallet backup (contains private keys)
+restored_wallets.json
+
+# System & editor junk
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+
+# Output
+*.zip
+*.tar
+*.tgz
+
+# Coverage reports
+coverage/
